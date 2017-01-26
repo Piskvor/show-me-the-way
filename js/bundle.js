@@ -57,7 +57,8 @@ var overview_map = L.map('overview_map', {
     scrollWheelZoom: false,
     doubleClickZoom: false,
     boxZoom: false,
-    minZoom: 4
+    minZoom: 4,
+    maxZoom: 8
 });
 if (filteredBbox) {
     overview_map.fitBounds(bbox);
@@ -264,12 +265,16 @@ function drawWay(change, cb) {
     var timedate = moment(change.neu.timestamp);
     change.timetext = timedate.fromNow();
 
-    map.fitBounds(bounds);
-    overview_map.panTo(bounds.getCenter());
+    //map.fitBounds(bounds);
+    //overview_map.panTo(bounds.getCenter());
     setTagText(change);
     changeset_info.innerHTML = changeset_tmpl({ change: change });
 
-    var color = { 'create': '#B7FF00', 'modify': '#FF00EA', 'delete': '#FF0000' }[change.type];
+    var color = {
+        'create': '#79b500',
+        'modify': '#7a5291',
+        'delete': '#af0000',
+    }[change.type];
     if (way.tags.building || way.tags.area) {
         newLine = L.polygon([], {
             opacity: 1,

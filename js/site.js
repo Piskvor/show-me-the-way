@@ -243,7 +243,7 @@ function setTagText(change) {
 }
 
 function drawWay(change, cb) {
-    pruneLines();
+    //pruneLines();
 
     var way = change.type === 'delete' ? change.old : change.neu;
     change.meta = {
@@ -263,8 +263,8 @@ function drawWay(change, cb) {
     var timedate = moment(change.neu.timestamp);
     change.timetext = timedate.fromNow();
 
-    map.fitBounds(bounds);
-    overview_map.panTo(bounds.getCenter());
+    //map.fitBounds(bounds);
+    //overview_map.panTo(bounds.getCenter());
     setTagText(change);
     changeset_info.innerHTML = changeset_tmpl({ change: change });
 
