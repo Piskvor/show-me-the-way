@@ -6,27 +6,35 @@ var osmStream = require('osm-stream'),
     LRU = require('lru-cache'),
     query_string = require('querystring');
 
-var bboxArray = ["-90.0", "-180.0", "90.0", "180.0"];
-var mapCenter = [51.505, -0.09];
-var filteredBbox = false;
-var changeset_comment_match = null;
-if (location.hash) {
-    var parsed_hash = query_string.parse(location.hash.replace('#', ''));
-    if (parsed_hash.length === 1 && parsed_hash[Object.keys(parsed_hash)[0]] === null) {
-        // To be backwards compatible with pages that assumed the only
-        // item in the hash would be the bbox
-        bboxArray = Object.keys(parsed_hash)[0].split(',');
-    } else {
-        if (parsed_hash.bounds) {
-            bboxArray = parsed_hash.bounds.split(',');
-            filteredBbox = true;
-        }
-        if (parsed_hash.comment) {
-            changeset_comment_match = parsed_hash.comment;
-            document.title += ' #' + changeset_comment_match;
+    var bboxArray = ["-90.0", "-180.0", "90.0", "180.0"]; // initial bounded area - whole planet
+    var mapCenter = [51.505, -0.09]; // initial map coordinates - London
+    var filteredBbox = false; // if true, only show a bounded area
+    var changeset_comment_match = null; // if non-null, only show changeset matching the comment
+    var cumulativeView = false; // if false, only show one changeset at a given time (default); else show cumulative changesets
+    var panningEnabled = true; // if true, map will pan between changesets; if false, panning is disabled (default for (filteredBbox && cumulativeView))
+    if (location.hash) {
+        var parsed_hash = query_string.parse(location.hash.replace('#', ''));
+        if (parsed_hash.length === 1 && parsed_hash[Object.keys(parsed_hash)[0]] === null) {
+            // To be backwards compatible with pages that assumed the only
+            // item in the hash would be the bbox
+            bboxArray = Object.keys(parsed_hash)[0].split(',');
+        } else {
+            if (parsed_hash.bounds) {
+                bboxArray = parsed_hash.bounds.split(',');
+                filteredBbox = true;
+            }
+            if (parsed_hash.comment) {
+                changeset_comment_match = parsed_hash.comment;
+                document.title += ' #' + changeset_comment_match;
+            }
+            if (parsed_hash.cumulative && parsed_hash.cumulative !== 'no' && parsed_hash.cumulative != 0) {
+                cumulativeView = true;
+                if (filteredBbox && cumulativeView) {
+                    panningEnabled = false;
+                }
+            }
         }
     }
-}
 
 var bbox = makeBbox(bboxArray);
 var bboxString = null;
@@ -245,7 +253,9 @@ function setTagText(change) {
 }
 
 function drawWay(change, cb) {
-    pruneLines();
+    if (!cumulativeView) {
+        pruneLines();
+    }
 
     var way = change.type === 'delete' ? change.old : change.neu;
     change.meta = {
@@ -265,16 +275,14 @@ function drawWay(change, cb) {
     var timedate = moment(change.neu.timestamp);
     change.timetext = timedate.fromNow();
 
-    //map.fitBounds(bounds);
-    //overview_map.panTo(bounds.getCenter());
+    if (panningEnabled) {
+        map.fitBounds(bounds);
+        overview_map.panTo(bounds.getCenter());
+    }
     setTagText(change);
     changeset_info.innerHTML = changeset_tmpl({ change: change });
 
-    var color = {
-        'create': '#79b500',
-        'modify': '#7a5291',
-        'delete': '#af0000',
-    }[change.type];
+    var color = { 'create': '#B7FF00', 'modify': '#FF00EA', 'delete': '#FF0000' }[change.type];
     if (way.tags.building || way.tags.area) {
         newLine = L.polygon([], {
             opacity: 1,
